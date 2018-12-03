@@ -7,6 +7,7 @@ import Input from "../../../components/UI/Input/Input";
 import { connect } from "react-redux";
 import withErrorHandler from "../../../hoc/withErrorHandler/withErrorHandler";
 import * as actions from "../../../store/actions/index";
+import { updateObject, checkValidity } from "../../../shared/utility";
 
 class ContactData extends Component {
   //JS config for dynamic input creation TODO: helper function
@@ -106,45 +107,30 @@ class ContactData extends Component {
     const order = {
       ingredients: this.props.ings,
       price: this.props.price,
-      orderData: formData //In real app calculate the price in server so it cannot be modified by user
+      orderData: formData, //In real app calculate the price in server so it cannot be modified by user
+      userId: this.props.userId
     };
 
     this.props.onOrderBurger(order, this.props.token);
   };
 
-  //Custom form validation
-  checkValidity(value, rule) {
-    let isValid = true;
-    if (rule.required) {
-      isValid = value.trim() !== "" && isValid;
-    }
-
-    if (rule.minLength) {
-      isValid = value.length >= rule.minLength && isValid;
-    }
-
-    if (rule.maxLength) {
-      isValid = value.length <= rule.maxLength && isValid;
-    }
-    return isValid;
-  }
-
   inputChangedHandler = (event, inputIdentifier) => {
-    const updatedOrderForm = {
-      ...this.state.orderForm
-    };
-
     //create deep clone so the original state won be mutated
-    const updatedFormElement = { ...updatedOrderForm[inputIdentifier] };
-    updatedFormElement.value = event.target.value;
-    updatedFormElement.valid = this.checkValidity(
-      updatedFormElement.value,
-      updatedFormElement.validation
+    const updatedFormElement = updateObject(
+      this.state.orderForm[inputIdentifier],
+      {
+        value: event.target.value,
+        valid: checkValidity(
+          event.target.value,
+          this.state.orderForm[inputIdentifier].validation
+        ),
+        touched: true
+      }
     );
 
-    updatedFormElement.touched = true;
-    console.log(updatedFormElement);
-    updatedOrderForm[inputIdentifier] = updatedFormElement;
+    const updatedOrderForm = updateObject(this.state.orderForm, {
+      [inputIdentifier]: updatedFormElement
+    });
 
     //Check if the whole form is valid
     let formIsValid = true;
@@ -200,7 +186,8 @@ const mapStateToProps = state => {
     ings: state.burgerBuilder.ingredients,
     price: state.burgerBuilder.totalPrice,
     loading: state.order.loading,
-    token: state.auth.token
+    token: state.auth.token,
+    userId: state.auth.userId
   };
 };
 
